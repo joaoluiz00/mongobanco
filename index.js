@@ -1,108 +1,109 @@
-const mongoose = require('mongoose');
-const readlineSync = require('readline-sync');
-const Activity = require('./atividadeModel'); 
+let readline = require("readline-sync");
+let { MongoClient, ObjectId } = require("mongodb");
 
-// Conexão com o MongoDB Atlas
-mongoose.connect('mongodb+srv://<João Luiz S.pereira>:<cleitin007>@cluster0.mongodb.net/<1571432412002>?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Conectado ao MongoDB Atlas'))
-  .catch(err => console.error('Erro ao conectar ao MongoDB Atlas', err));
+let username = "usuario";
+let password = "cleitin007";
+let cluster = "cluster0"; // Ajuste se necessário
+let dbName = "1571432412002"; // Nome do banco de dados
+let collectionName = "tabela"; // Nome da coleção
 
-// Funções do sistema
+const url = `mongodb+srv://${username}:${password}@${cluster}.uvhrwxz.mongodb.net/${dbName}?retryWrites=true&w=majority&serverSelectionTimeoutMS=5000`;
+const client = new MongoClient(url);
 
-// Cadastro de atividade
-async function cadastrarAtividade() {
-  const nome = readlineSync.question('Nome da atividade: ');
-  const descricao = readlineSync.question('Descricao da atividade: ');
-  const data = readlineSync.question('Data da atividade: ');
-  const realizada = readlineSync.question('Atividade realizada (sim/nao): ');
-
-  const novaAtividade = new Activity({
-    nome,
-    descricao,
-    data,
-    realizada
-  });
-
-  await novaAtividade.save();
-  console.log('Atividade cadastrada com sucesso!');
+function exibirMenu() {
+    let op = 0;
+    console.clear();
+    console.log("CRUD MongoDB");
+    console.log("1 - Inserir");  
+    console.log("2 - Alterar");         
+    console.log("3 - Listar"); 
+    console.log("4 - Localizar");
+    console.log("5 - Excluir");
+    console.log("6 - Sair");
+    op = parseInt(readline.question("Opcao: "));
+    return op;
 }
 
-// Consulta de atividade por código
-async function consultarAtividade() {
-  const id = readlineSync.question('Digite o ID da atividade: ');
-  const atividade = await Activity.findById(id);
-  if (atividade) {
-    console.log('Atividade encontrada:', atividade);
-  } else {
-    console.log('Atividade não encontrada!');
-  }
-}
+async function main() {
+    let db = "";
+    let collection = "";
+    let sites = "";
+    let site = "";
+    let idSite = "";
+    let nomeSite = "";
+    let enderecoSite = "";
+    let op = 0;
+    let resultado = "";
+    let filtro = "";
 
-// Lista de atividades
-async function listarAtividades() {
-  const atividades = await Activity.find();
-  console.log('Lista de atividades:', atividades);
-}
+    try {
+        await client.connect();
+        console.log("Conexao efetuada com o banco de dados MongoDB");
+        db = client.db(dbName);
+        collection = db.collection(collectionName);
+        
+        while (op !== 6) {
+            op = exibirMenu();
 
-// Edição de atividade
-async function editarAtividade() {
-  const id = readlineSync.question('Digite o ID da atividade a ser editada: ');
-  const atividade = await Activity.findById(id);
-  if (atividade) {
-    atividade.nome = readlineSync.question(`Nome (${atividade.nome}): `) || atividade.nome;
-    atividade.descricao = readlineSync.question(`Descricao (${atividade.descricao}): `) || atividade.descricao;
-    atividade.data = readlineSync.question(`Data (${atividade.data}): `) || atividade.data;
-    atividade.realizada = readlineSync.question(`Realizada (sim/nao) (${atividade.realizada}): `) || atividade.realizada;
-    await atividade.save();
-    console.log('Atividade editada com sucesso!');
-  } else {
-    console.log('Atividade não encontrada!');
-  }
-}
+            if (op === 1) {
+                // Inserir
+                nomeSite = readline.question("Nome: ");
+                enderecoSite = readline.question("Endereco: ");
+                site = { 'nome': nomeSite, 'endereco': enderecoSite };
+                resultado = await collection.insertOne(site);
+                console.log("Site Inserido:", resultado.insertedId);
+                readline.question("Pressione enter para voltar para o menu.");
+            }
 
-// Exclusão de atividade
-async function excluirAtividade() {
-  const id = readlineSync.question('Digite o ID da atividade a ser excluída: ');
-  await Activity.findByIdAndDelete(id);
-  console.log('Atividade excluída com sucesso!');
-}
+            if (op === 2) {
+                // Alterar
+                idSite = readline.question("Id: ");
+                filtro = { '_id': new ObjectId(idSite) };
+                sites = await collection.find(filtro).toArray();
+                console.log("Site a ser alterado:", sites[0]);
+                console.log("Informe os novos dados do site");
+                nomeSite = readline.question("Nome: ");
+                enderecoSite = readline.question("Endereco: ");
+                site = { $set: { 'nome': nomeSite, 'endereco': enderecoSite } };
+                resultado = await collection.updateOne(filtro, site);
+                readline.question("Pressione enter para voltar para o menu.");
+            }
 
-// Menu do sistema
-async function menu() {
-  while (true) {
-    console.log(`
-    1. Cadastrar nova atividade
-    2. Consultar atividade por código
-    3. Listar todas as atividades
-    4. Editar atividade
-    5. Excluir atividade
-    6. Sair
-    `);
-    const opcao = readlineSync.question('Escolha uma opção: ');
+            if (op === 3) {
+                // Listar
+                sites = await collection.find({}).toArray();
+                console.log('Lista de sites: ', sites);
+                readline.question("Pressione enter para voltar para o menu.");
+            }
 
-    switch (opcao) {
-      case '1':
-        await cadastrarAtividade();
-        break;
-      case '2':
-        await consultarAtividade();
-        break;
-      case '3':
-        await listarAtividades();
-        break;
-      case '4':
-        await editarAtividade();
-        break;
-      case '5':
-        await excluirAtividade();
-        break;
-      case '6':
-        console.log('Saindo...');
-        process.exit();
-      default:
-        console.log('Opção inválida!');
+            if (op === 4) {
+                // Localizar
+                nomeSite = readline.question("Nome: ");
+                filtro = { 'nome': { '$regex': `${nomeSite}`, '$options': 'i' } };
+                sites = await collection.find(filtro).toArray();
+                console.log('Lista de sites: ', sites);
+                readline.question("Pressione enter para voltar para o menu.");
+            }
+
+            if (op === 5) {
+                // Excluir
+                idSite = readline.question("Id: ");
+                filtro = { '_id': new ObjectId(idSite) };
+                resultado = await collection.deleteOne(filtro);
+                if (resultado.deletedCount > 0) {
+                    console.log("Registro excluido com sucesso!!!!!");
+                } else {
+                    console.log("Registro não encontrado!!!!!");
+                }
+                readline.question("Pressione enter para voltar para o menu.");
+            }
+        }
+
+    } catch (error) {
+        console.error(error);
+    } finally {
+        await client.close();
     }
-  }
 }
 
-menu();
+main().catch(console.error);
